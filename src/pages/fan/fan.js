@@ -112,7 +112,7 @@ export default {
       console.log("Command was send..", _target.key);
       this.sendTarget = _target;
       this.$set(this.irData[this.sendTarget.key], "iconClass", config.iconIr.learning);
-      helper.sendBroadlinkLearnCmd(this.$store.state.hassInfo.broadlinkIp);
+      helper.sendBroadlinkLearnCmd(this.$store.state.hassInfo.broadlinkIp, "fan");
     },
     changeBroadlinkIp() {
       this.$store.state.hassInfo.broadlinkIp = this.hassInfo.broadlinkIp;

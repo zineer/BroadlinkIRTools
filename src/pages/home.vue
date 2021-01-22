@@ -35,7 +35,7 @@
             </small>
           </div>
           <div class="form-group mb-1" :class="{'is-invalid':errors.has('hassInfo.broadlinkIp')}">
-            <label class="mb-0">Broadlink IP address</label>
+            <label class="mb-0">Broadlink Name</label>
             <input v-model="hassInfo.broadlinkIp" v-validate="'required'" data-vv-as="broadlink service" name="hassInfo.broadlinkIp" type="text" class="form-control form-control-sm">
             <small v-if="errors.has('hassInfo.broadlinkIp')" class="form-text text-muted">{{ errors.first('hassInfo.broadlinkIp') }}</small>
           </div>
