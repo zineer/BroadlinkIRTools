@@ -81,7 +81,7 @@ export default {
       hassInfo: {
         url: "https://",
         token: undefined,
-        broadlinkIp: "192.168.1.13"
+        broadlinkIp: "name"
       }
     };
   },

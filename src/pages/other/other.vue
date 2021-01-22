@@ -7,9 +7,9 @@
             <router-link class="btn btn-secondary btn-sm" to="/"><i class="fas fa-chevron-left" /></router-link>
             <span>Universal code</span>
           </h3>
-          <p>Create by Keite Trần https://github.com/keitetran/BroadlinkIRTools
+          <p>Created by Keite Trần, modified by mArgAAle
             <br>
-            More questtion post <a href="https://github.com/keitetran/BroadlinkIRTools/issues">here</a>
+            Questions?<a href="https://github.com/margaale/BroadlinkIRTools/issues">here</a>
           </p>
         </div>
         <div class="col-12">

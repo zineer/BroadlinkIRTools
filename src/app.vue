@@ -4,7 +4,7 @@
   </div>
 </template>
 <style>
-@import "https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css";
+@import "https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css";
 @import "https://use.fontawesome.com/releases/v5.7.2/css/all.css";
 .container-fluid {
   height: 100vh;
