@@ -5,32 +5,18 @@
         <div class="col-12">
           <h3 class="mb-0">
             <router-link class="btn btn-secondary btn-sm" to="/"><i class="fas fa-chevron-left" /></router-link>
-            <span>Cimate</span>
+            <span>Climate</span>
           </h3>
-          <p>Created by Keite Trần, modified by mArgAAle
-            <br>
-            Questions?<a href="https://github.com/margaale/BroadlinkIRTools/issues">here</a>
+          <p>
+            <a href="https://github.com/margaale/BroadlinkIRTools/issues">Questions?</a>
           </p>
         </div>
+      </div>
+      <div class="row mt-3">
         <div class="col-12">
-          <div class="form-group">
-            <h5>Connection status <span class="badge badge-success">{{$store.state.socketStatus}}</span></h5>
-          </div>
-          <div v-if="hassInfo" class="form-group mb-1" :class="{'is-invalid':errors.has('hassInfo.broadlinkIp')}">
-            <label class="mb-0">You can change Broadlink Name</label>
-            <input v-model="hassInfo.broadlinkIp" v-validate="'required'" data-vv-as="broadlink service" name="hassInfo.broadlinkIp" type="text" class="form-control form-control-sm">
-            <small v-if="errors.has('hassInfo.broadlinkIp')" class="form-text text-muted">{{ errors.first('hassInfo.broadlinkIp') }}</small>
-            <small v-else class="form-text text-muted">Broadlink Name</small>
-          </div>
+          <h4>0. Optional - Import Existing JSON</h4>
           <div class="form-group mb-1">
-            <div class="row align-items-center mt-2">
-              <div class="col-6">
-                <button type="button" class="btn btn-primary btn-sm" @click="changeBroadlinkIp()">Change command</button>
-              </div>
-              <div v-if="hassInfoStatus" class="col-6 text-right">
-                <small class="pt-3">Press F5 to reconnect</small>
-              </div>
-            </div>
+            <input type="file" :name="jsonfile" accept="application/json" class="form-control form-control-sm" @change="fileChange($event.target.name, $event.target.files);">
           </div>
         </div>
       </div>
@@ -89,6 +75,13 @@
             <small v-if="errors.has('settings.fanModes')" class="form-text text-muted">{{ errors.first('settings.fanModes') }}</small>
             <small v-else class="form-text text-muted">Ex: auto, level1, level2, level3, level4</small>
           </div>
+          <div class="form-group mb-1" :class="{'is-invalid':errors.has('settings.fanModes')}">
+            <label class="mb-0">Swing Modes</label>
+            <input v-model="settings.swingModes" v-validate="'required'" :disabled="hassInfoStatus" data-vv-as="swing modes" name="settings.swingModes" type="text" class="form-control form-control-sm">
+            <small v-if="errors.has('settings.swingModes')" class="form-text text-muted">{{ errors.first('settings.swingModes') }}</small>
+            <small v-else class="form-text text-muted">Ex: horizontal, vertical, both</small>
+          </div>
+
           <div class="form-group mb-1">
             <button type="button" :disabled="hassInfoStatus" class="btn btn-primary btn-sm mt-2" @click="setupComponent()"><i class="fas fa-cogs mr-1" /> Create table code</button>
           </div>
@@ -102,8 +95,7 @@
           </div>
         </div>
         <div class="col-12 mt-2">
-          <div class="alert alert-warning p-2">Please check this file content before replace to hass. Because this tool alway update after SmartIR updated.</div>
-          <div class="alert alert-info p-2">You can use this tool for format json code <a href="https://jsonformatter.org/" target="_blank">https://jsonformatter.org/</a></div>
+          <div class="alert alert-warning p-2">Please backup your original file before replacing in hass.</div>
         </div>
       </div>
     </div>
@@ -113,6 +105,8 @@
           Click to icon <i class="fas fa-wifi" /> then press your remote button to learn IR code.
           Or icon <i class="fas fa-times" /> for relearn IR code if error.
           Please wait for command response come.
+          <br>
+          <button type="button" class="btn btn-primary btn-sm mt-2" @click="autoMode()">Auto Mode</button>
         </div>
         <table class="table table-bordered mb-0">
           <thead>
@@ -120,12 +114,13 @@
               <th class="text-center" style="width: 20px;">#</th>
               <th class="text-center" style="width: 20px;">Mode</th>
               <th class="text-center" style="width: 20px;">Fan</th>
+              <th class="text-center" style="width: 20px;">Swing</th>
               <th class="text-center" style="width: 20px;">Temp</th>
               <th>IR code</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(item, index) in irData" :key="index" :ref="'irKey_'+item.key">
+            <tr v-for="(item, index) in irData" :key="index" :ref="'irKey_'+item.key" :id="'row_'+item.key">
               <td class="text-center">
                 <a href="javascript:;" :class="$helper.getTextClassByIcon(item.iconClass)" @click="sendLearnCommand(item)">
                   <i :class="item.iconClass" />
@@ -133,6 +128,7 @@
               </td>
               <td class="text-center">{{item.operationMode}}</td>
               <td class="text-center">{{item.fanMode}}</td>
+              <td class="text-center">{{item.swingMode}}</td>
               <td class="text-center">{{item.temp}}</td>
               <td>{{item.irCode}}</td>
             </tr>

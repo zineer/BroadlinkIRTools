@@ -26,9 +26,13 @@ export default {
         minTemperature: 18,
         maxTemperature: 32,
         operationModes: "cool, heat",
-        fanModes: "auto, level1, level2, level3, level4"
+        fanModes: "auto, level1, level2, level3, level4",
+        swingModes: "horizontal, vertical, both"
       },
-      sendTarget: undefined
+      sentCommandKey: undefined,
+      promiseResolve: undefined,
+      promiseReject: undefined,
+      jsonfile: null
     };
   },
   computed: {
@@ -47,6 +51,10 @@ export default {
       if ($.isEmptyObject(this.settings.fanModes)) return;
       return this.settings.fanModes.split(",").map(m => m.trim());
     },
+    sendCmdSwingList() {
+      if ($.isEmptyObject(this.settings.swingModes)) return;
+      return this.settings.swingModes.split(",").map(m => m.trim());
+    },
     sendCmdTempList() {
       let temp = [];
       let index = this.settings.minTemperature * 1;
@@ -61,18 +69,27 @@ export default {
     "$store.state.socketMsgs": {
       deep: true,
       handler: function (evData) {
-        if (evData.event && evData.event.data.new_state.state === "notifying" && evData.event.event_type === "state_changed") {
-          let message = evData.event.data.new_state.attributes.message;
-          let irCode = message.replace("Received packet is: ", "");
-          this.$set(this.irData[this.sendTarget.key], "irCode", irCode);
+        if (evData.event && evData.event.event_type && evData.event.event_type === "remote_event" && evData.event.data) {
+          let eventData = evData.event.data;
 
-          if (message === "Did not received any signal") {
-            this.$set(this.irData[this.sendTarget.key], "iconClass", config.iconIr.learnFalse);
-            return;
+          if (this.sentCommandKey === eventData.command) {
+            if (eventData.error) {
+              this.$set(this.irData[this.sentCommandKey], "iconClass", config.iconIr.learnFalse);
+              console.error("Error: ", eventData.error);
+              if (this.promiseReject) {
+                this.promiseReject(true);
+              }
+              return;
+            }
+
+            let irCode = eventData.code;
+            this.$set(this.irData[this.sentCommandKey], "irCode", irCode);
+            this.$set(this.irData[this.sentCommandKey], "iconClass", config.iconIr.learnSuccess);
+            this.sentCommandKey = undefined;
+            if (this.promiseResolve) {
+              this.promiseResolve(true);
+            }
           }
-
-          this.$set(this.irData[this.sendTarget.key], "iconClass", config.iconIr.learnSuccess);
-          this.sendTarget = undefined;
         }
       }
     }
@@ -98,6 +115,7 @@ export default {
         precision: parseFloat(this.settings.precision),
         operationModes: this.settings.operationModes.split(",").map(m2 => m2.trim()),
         fanModes: this.settings.fanModes.split(",").map(m2 => m2.trim()),
+        swingModes: this.settings.swingModes.split(",").map(m2 => m2.trim()),
         commands: {}
       };
 
@@ -108,8 +126,9 @@ export default {
         } else {
           if (!jsonData.commands[m.operationMode]) jsonData.commands[m.operationMode] = {};
           if (!jsonData.commands[m.operationMode][m.fanMode]) jsonData.commands[m.operationMode][m.fanMode] = {};
-          if (!jsonData.commands[m.operationMode][m.fanMode][m.temp]) jsonData.commands[m.operationMode][m.fanMode][m.temp] = {};
-          jsonData.commands[m.operationMode][m.fanMode][m.temp] = m.irCode;
+          if (!jsonData.commands[m.operationMode][m.fanMode][m.swingMode]) jsonData.commands[m.operationMode][m.fanMode][m.swingMode] = {};
+          if (!jsonData.commands[m.operationMode][m.fanMode][m.swingMode][m.temp]) jsonData.commands[m.operationMode][m.fanMode][m.swingMode][m.temp] = {};
+          jsonData.commands[m.operationMode][m.fanMode][m.swingMode][m.temp] = m.irCode;
         }
       });
 
@@ -125,28 +144,124 @@ export default {
           operationMode = operationMode.trim();
           _that.settings.fanModes.split(",").forEach(fanMode => {
             fanMode = fanMode.trim();
-            _that.sendCmdTempList.forEach(temp => {
-              _that.$set(_that.irData, `${operationMode}_${fanMode}_${temp}`, {
-                key: `${operationMode}_${fanMode}_${temp}`,
-                operationMode: operationMode,
-                fanMode: fanMode,
-                temp: temp,
-                irCode: "",
-                iconClass: config.iconIr.learn
+            _that.settings.swingModes.split(",").forEach(swingMode => {
+              swingMode = swingMode.trim();
+              _that.sendCmdTempList.forEach(temp => {
+                _that.$set(_that.irData, `${operationMode}_${fanMode}_${swingMode}_${temp}`, {
+                  key: `${operationMode}_${fanMode}_${swingMode}_${temp}`,
+                  operationMode: operationMode,
+                  fanMode: fanMode,
+                  swingMode: swingMode,
+                  temp: temp,
+                  irCode: "",
+                  iconClass: config.iconIr.learn
+                });
               });
             });
           });
         });
+        console.log(this.irData);
       });
     },
     sendLearnCommand(_target) {
       console.log("Command was send..", _target.key);
-      this.sendTarget = _target;
-      this.$set(this.irData[this.sendTarget.key], "iconClass", config.iconIr.learning);
-      helper.sendBroadlinkLearnCmd(this.$store.state.hassInfo.broadlinkIp, "climate", this.sendTarget.key);
+      this.sentCommandKey = _target.key;
+      this.$set(this.irData[this.sentCommandKey], "iconClass", config.iconIr.learning);
+      helper.sendBroadlinkLearnCmd(this.$store.state.hassInfo.broadlinkIp, "climate", this.sentCommandKey);
     },
     changeBroadlinkIp() {
       this.$store.state.hassInfo.broadlinkIp = this.hassInfo.broadlinkIp;
+    },
+    fileChange(fieldName, fileList) {
+      if (!fileList.length) return;
+
+      let file = fileList[0];
+      const reader = new FileReader();
+      reader.addEventListener("load", (event) => {
+        let jsonData = JSON.parse(event.currentTarget.result);
+        console.log(jsonData);
+
+        if (jsonData.manufacturer) {
+          this.settings.manufacturer = jsonData.manufacturer;
+        }
+        if (jsonData.supportedModels) {
+          this.settings.supportedModels = jsonData.supportedModels.join(", ");
+        }
+        if (jsonData.supportedController) {
+          this.settings.supportedControllerSelected = jsonData.supportedController;
+        }
+        if (jsonData.precision) {
+          this.settings.precision = jsonData.precision;
+        }
+        if (jsonData.minTemperature) {
+          this.settings.minTemperature = jsonData.minTemperature;
+        }
+        if (jsonData.maxTemperature) {
+          this.settings.maxTemperature = jsonData.maxTemperature;
+        }
+        if (jsonData.operationModes) {
+          this.settings.operationModes = jsonData.operationModes.join(", ");
+        }
+        if (jsonData.fanModes) {
+          this.settings.fanModes = jsonData.fanModes.join(", ");
+        }
+        if (jsonData.swingModes) {
+          this.settings.swingModes = jsonData.swingModes.join(", ");
+        }
+        if (jsonData.commands) {
+          this.irDataReady = true;
+          for (const operationMode in jsonData.commands) {
+            if (operationMode === "off") {
+              this.$set(this.irData, `${operationMode}`, {
+                key: `${operationMode}`,
+                operationMode: operationMode,
+                fanMode: null,
+                swingMode: null,
+                temp: null,
+                irCode: jsonData.commands[operationMode],
+                iconClass: jsonData.commands[operationMode] ? config.iconIr.learnSuccess : config.iconIr.learn
+              });
+            } else {
+              for (const fanMode in jsonData.commands[operationMode]) {
+                for (const swingMode in jsonData.commands[operationMode][fanMode]) {
+                  for (const temp in jsonData.commands[operationMode][fanMode][swingMode]) {
+                    this.$set(this.irData, `${operationMode}_${fanMode}_${swingMode}_${temp}`, {
+                      key: `${operationMode}_${fanMode}_${swingMode}_${temp}`,
+                      operationMode: operationMode,
+                      fanMode: fanMode,
+                      swingMode: swingMode,
+                      temp: temp,
+                      irCode: jsonData.commands[operationMode][fanMode][swingMode][temp],
+                      iconClass: jsonData.commands[operationMode][fanMode][swingMode][temp] ? config.iconIr.learnSuccess : config.iconIr.learn
+                    });
+                  }
+                }
+              }
+            }
+          }
+          console.log(this.irData);
+        }
+      });
+      reader.readAsText(file);
+    },
+    async autoMode() {
+      if (!this.irDataReady) {
+        return;
+      }
+      console.log(this.irData);
+      for (const command in this.irData) {
+        if (this.irData[command]["irCode"] === "") {
+          await new Promise((resolve, reject) => {
+            this.promiseResolve = resolve;
+            this.promiseReject = reject;
+            console.log("Send code for " + command);
+            this.sentCommandKey = command;
+            document.getElementById("row_" + command).scrollIntoView();
+            this.$set(this.irData[command], "iconClass", config.iconIr.learning);
+            helper.sendBroadlinkLearnCmd(this.$store.state.hassInfo.broadlinkIp, "climate", command);
+          });
+        }
+      }
     }
   }
 };
