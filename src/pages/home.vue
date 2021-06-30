@@ -22,7 +22,7 @@
             <label class="mb-0">Hass Address</label>
             <input v-model="hassInfo.url" v-validate="'required'" :disabled="hassInfoStatus" data-vv-as="HASS address" name="hassInfo.url" type="text" class="form-control form-control-sm" placeholder="http://">
             <small v-if="errors.has('hassInfo.url')" class="form-text text-muted">{{ errors.first('hassInfo.url') }}</small>
-            <small v-else class="form-text text-muted">hassbian.local is ok</small>
+            <small v-else class="form-text text-muted">If you are accessing this page from https, you must enter an https address</small>
           </div>
           <div class="form-group mb-1" :class="{'is-invalid':errors.has('hassInfo.token')}">
             <label class="mb-0">Token</label>
@@ -162,7 +162,7 @@ export default {
             vm.socket.send(JSON.stringify({
               id: vm.$store.state.socketId++,
               type: "subscribe_events",
-              event_type: "remote_event"
+              event_type: "remote_learned_command"
             }));
 
             // vm.socket.send(JSON.stringify({

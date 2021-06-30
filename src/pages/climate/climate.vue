@@ -120,7 +120,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(item, index) in irData" :key="index" :ref="'irKey_'+item.key" :id="'row_'+item.key">
+            <tr v-for="(item, index) in irData" :id="'row_'+item.key" :key="index" :ref="'irKey_'+item.key">
               <td class="text-center">
                 <a href="javascript:;" :class="$helper.getTextClassByIcon(item.iconClass)" @click="sendLearnCommand(item)">
                   <i :class="item.iconClass" />
