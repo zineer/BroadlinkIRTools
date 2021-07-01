@@ -164,6 +164,11 @@ export default {
               type: "subscribe_events",
               event_type: "remote_learned_command"
             }));
+            vm.socket.send(JSON.stringify({
+              id: vm.$store.state.socketId++,
+              type: "subscribe_events",
+              event_type: "remote_learned_command_failed"
+            }));
 
             // vm.socket.send(JSON.stringify({
             //   id: vm.$store.state.socketId++,

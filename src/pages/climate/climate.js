@@ -69,24 +69,31 @@ export default {
     "$store.state.socketMsgs": {
       deep: true,
       handler: function (evData) {
-        if (evData.event && evData.event.event_type && evData.event.event_type === "remote_learned_command" && evData.event.data) {
+        if (evData.event && evData.event.event_type && evData.event.data) {
           let eventData = evData.event.data;
+          switch (evData.event.event_type) {
+            case "remote_learned_command":
 
-          if (eventData.error) {
-            alert(eventData.error);
-            this.$set(this.irData[this.sentCommandKey], "iconClass", config.iconIr.learnFalse);
-            console.error("Error: ", eventData.error);
-            if (this.promiseReject) {
-              this.promiseReject(true);
-            }
-          } else if (this.sentCommandKey === eventData.command) {
-            let irCode = eventData.code;
-            this.$set(this.irData[this.sentCommandKey], "irCode", irCode);
-            this.$set(this.irData[this.sentCommandKey], "iconClass", config.iconIr.learnSuccess);
-            this.sentCommandKey = undefined;
-            if (this.promiseResolve) {
-              this.promiseResolve(true);
-            }
+              if (this.sentCommandKey === eventData.command) {
+                let irCode = eventData.code;
+                this.$set(this.irData[this.sentCommandKey], "irCode", irCode);
+                this.$set(this.irData[this.sentCommandKey], "iconClass", config.iconIr.learnSuccess);
+                this.sentCommandKey = undefined;
+                if (this.promiseResolve) {
+                  this.promiseResolve(true);
+                }
+              }
+              break;
+            case "remote_learned_command_failed":
+              alert(eventData.error);
+              if (this.sentCommandKey) {
+                this.$set(this.irData[this.sentCommandKey], "iconClass", config.iconIr.learnFalse);
+                console.error("Error: ", eventData.error);
+                if (this.promiseReject) {
+                  this.promiseReject(true);
+                }
+              }
+              break;
           }
         }
       }
